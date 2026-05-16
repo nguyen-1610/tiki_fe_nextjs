@@ -1,0 +1,10 @@
+scrape_configs:
+  - job_name: 'Prometheus'
+    static_configs:
+      # Prometheus scrape metrics từ chính port 9090 của nó nên dùng localhost
+      - targets: ['localhost:9090'] 
+  
+  - job_name: 'Node Exporter'
+    static_configs:
+      # Prometheus scrape metrics từ node-exporter nên dùng container name
+      - targets: ['node-exporter:9100'] 

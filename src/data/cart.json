@@ -1,0 +1,58 @@
+[
+  {
+    "id": "14564223-3b22-42ea-ab71-498c9d199361",
+    "image": "/products/belt-1.png",
+    "title": "The automobile layout consists of a front-engine design, with transaxle-type transmissions mounted at the rear of the engine and four wheel drive",
+    "star": 4.5,
+    "price": 19137,
+    "isTopDeal": true,
+    "isAuthentic": true,
+    "shipping": {
+      "type": "fast",
+      "date": "3h"
+    },
+    "madeIn": "facilis"
+  },
+  {
+    "id": "4e31eb94-1866-4598-b7d6-5c370f2d4574",
+    "image": "/products/fridge-2.png",
+    "title": "The Apollotech B340 is an affordable wireless mouse with reliable connectivity, 12 months battery life and modern design",
+    "star": 4.5,
+    "price": 83771,
+    "isTopDeal": false,
+    "isAuthentic": false,
+    "shipping": {
+      "type": "fast",
+      "date": "3h"
+    },
+    "madeIn": "sit"
+  },
+  {
+    "id": "81cd230e-3da6-471c-98e0-4571f601cfa0",
+    "image": "/products/belt-3.png",
+    "title": "The slim & simple Maple Gaming Keyboard from Dev Byte comes with a sleek body and 7- Color RGB LED Back-lighting for smart functionality",
+    "star": 4.5,
+    "price": 49557,
+    "isTopDeal": true,
+    "isAuthentic": true,
+    "shipping": {
+      "type": "fast",
+      "date": "3h"
+    },
+    "madeIn": "incidunt"
+  },
+  {
+    "id": "a597762f-a612-47fd-9f27-d8eb34a98279",
+    "image": "/products/belt-4.png",
+    "title": "The beautiful range of Apple Naturalé that has an exciting mix of natural ingredients. With the Goodness of 100% Natural Ingredients",
+    "star": 4.5,
+    "price": 1894,
+    "isTopDeal": false,
+    "isAuthentic": false,
+    "shipping": {
+      "type": "fast",
+      "date": "3h"
+    },
+    "madeIn": "delectus"
+  }
+]

@@ -1,0 +1,81 @@
+# docker-compose chạy ở bước cuối cùng trên VPS 
+# nó không liên quan đến việc build image.
+# Kéo image về → chạy tất cả container
+services:
+
+  frontend:
+    image: znic/tiki-fe:latest
+    container_name: tiki-fe
+    restart: always
+    ports:
+      - "3000:3000"
+    networks:
+      - tiki-network
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: tiki-prometheus
+    restart: always
+    ports:
+      - "9090:9090"
+    volumes:
+    # volumes ở đây là mount file từ máy host vào container — kiểu như tạo 1 đường link trực tiếp:
+    # Tại sao không COPY vào image luôn?
+    # Vì prometheus.yml cần chỉnh sửa thường xuyên — thêm job mới, thêm target mới.
+    # Nếu COPY vào image: mỗi lần đổi config phải rebuild image → push lên registry → redeploy
+    # Mount volume: đổi file trên máy, container thấy ngay — chỉ cần restart prometheus là xong
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    networks:
+      - tiki-network
+
+  # Mục đích: Thu thập metrics từ host OS (CPU, RAM, disk, network)
+  # Đặt cạnh Prometheus để Prometheus lấy metrics data từ node này
+  node-exporter: 
+    image: prom/node-exporter:latest
+    container_name: tiki-node-exporter
+    restart: always
+    ports:
+      - "9100:9100"
+    # Node-exporter không cần volume vì nó không lưu gì cả
+    # Chỉ thu thập số liệu hiện tại → dùng xong là bỏ → không cần persistence
+    networks:
+      - tiki-network
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: tiki-grafana
+    restart: always
+    ports:
+      - "3001:3000"
+    volumes: # không bắt buộc nhưng mỗi lần restart mất hết dashboard đã setup.
+      - grafana_data:/var/lib/grafana 
+    networks:
+      - tiki-network
+    depends_on:
+      - prometheus
+    
+  # 5. Jenkins
+  jenkins:
+    image: jenkins/jenkins:lts
+    container_name: tiki-jenkins
+    restart: always
+    user: root # Jenkins không cho chạy root mặc định → phải khai user: root
+    ports:
+      - "8080:8080"          # Web UI của Jenkins, bạn vào đây để thao tác, xem build log..
+      - "50000:50000"        # Port để Jenkins giao tiếp với agents Khi Jenkins chạy job nặng, nó có thể thuê thêm "agent" (máy khác) để chạy — agent kết nối qua port này. Dự án nhỏ như này thì 50000 chưa dùng đến, nhưng cứ mở sẵn theo chuẩn Jenkins.
+    volumes: # Lý do cần volumes
+    # vì persistence (lưu trữ lâu dài): Jenkins lưu rất nhiều thứ quan trọng như job đã tạo, credential, log, build history...
+    # Nếu không dùng volumes: restart container = mất hết lịch sử và cấu hình
+    # =>Volumes giúp Jenkins "nhớ" mọi thứ giữa các lần khởi động.
+      - jenkins_home:/var/jenkins_home
+    networks:
+      - tiki-network
+
+# Tạo một volume tên là jenkins_home — Docker quản lý chỗ lưu trữ này
+volumes:
+  jenkins_home:
+  grafana_data:
+      
+networks:
+  tiki-network:
+    driver: bridge
