@@ -1,0 +1,33 @@
+- name: Deploy tiki-fe to VPS
+  hosts: servers  # tương ứng với [servers] trong inventory.ini
+  become: true     # chạy lệnh với quyền root
+
+  tasks:
+    - name: Update apt cache
+      apt: 
+        update_cache: yes # update apt cache, tương tự apt-get update
+
+    - name: Install required packages (docker.io, git, curl)
+      apt: 
+        name: 
+          - docker.io
+          - git
+          - curl
+        state: present # cài đặt packages nếu chưa có
+
+    - name: Install docker-compose
+      get_url: # dùng get_url để tải file từ internet tương tự curl
+        url: https://github.com/docker/compose/releases/download/v2.27.0/docker-compose-Linux-x86_64
+        dest: /usr/local/bin/docker-compose 
+        mode: '0755' # giống chmod 755, cấp quyền thực thi
+
+    - name: Clone repo từ github
+      git:
+        repo: https://github.com/nguyen-1610/tiki_fe_nextjs.git
+        dest: /root/app
+        force: true # nếu thư mục đã có rồi thì overwrite — tránh lỗi "destination already exists"
+        
+    - name: Chạy docker-compose
+      shell:
+        cmd: docker-compose up -d 
+        chdir: /root/app # chạy lệnh trong thư mục /root/app giống cd /root/app
