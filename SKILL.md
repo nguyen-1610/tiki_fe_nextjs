@@ -670,3 +670,124 @@ Grafana         → Hiển thị metrics thành dashboard đẹp
 Ansible: Setup lần đầu, tạo VPS mới, cài đặt phần mềm
 Jenkins: Deploy code mới mỗi khi push (tự động, liên tục)
 ```
+
+---
+
+## Next.js 14 — Docker & CI/CD
+
+### Bật standalone mode (bắt buộc)
+```js
+// next.config.mjs
+const nextConfig = {
+  output: 'standalone',
+}
+```
+Không có dòng này thì `.next/standalone` không được tạo → Docker build thành công nhưng không chạy được.
+
+### Dockerfile cho Next.js (multi-stage: deps → builder → runner)
+```dockerfile
+# Stage 1: Cài dependencies
+FROM node:22-alpine AS deps
+WORKDIR /app
+RUN npm install -g pnpm
+COPY package.json pnpm-lock.yaml ./
+RUN pnpm install --frozen-lockfile --ignore-scripts
+# --frozen-lockfile: không cho phép thay đổi pnpm-lock.yaml (giữ đúng version)
+# --ignore-scripts: bỏ qua build scripts của packages (tránh bị block bởi @fortawesome và tương tự)
+
+# Stage 2: Build app
+FROM node:22-alpine AS builder
+WORKDIR /app
+RUN npm install -g pnpm
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+RUN pnpm build
+# Mỗi FROM là image hoàn toàn mới → pnpm không được kế thừa → phải cài lại
+
+# Stage 3: Runner (image production nhỏ gọn)
+FROM node:22-alpine AS runner
+WORKDIR /app
+ENV NODE_ENV=production
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
+COPY --from=builder /app/public ./public
+EXPOSE 3000
+CMD ["node", "server.js"]
+```
+
+**Tại sao dùng Node.js thay vì Nginx?**
+Next.js có SSR (Server-Side Rendering) và dynamic routes → cần Node.js runtime. Nginx chỉ serve static file, không xử lý được SSR.
+
+### GitHub Actions cho Next.js
+Phải có `setup-buildx-action` trước `build-push-action@v5`, nếu không báo lỗi buildx:
+```yaml
+- name: Set up Docker Buildx
+  uses: docker/setup-buildx-action@v3   # ← bắt buộc
+
+- name: Build & Push
+  uses: docker/build-push-action@v5
+  with:
+    context: .
+    push: true
+    tags: USERNAME/IMAGE:latest
+```
+
+---
+
+## SSH Key trên Windows
+
+`ssh-copy-id` không có trên PowerShell → dùng lệnh này thay:
+```powershell
+type C:\Users\ADMIN\.ssh\id_rsa.pub | ssh root@VPS_IP "mkdir -p ~/.ssh && cat >> ~/.ssh/authorized_keys"
+```
+Nhập password VPS 1 lần → sau đó SSH không cần password nữa.
+
+---
+
+## Grafana — Data Source URL
+
+Khi Grafana và Prometheus cùng chạy trong Docker network → dùng **tên container** thay vì IP:
+```
+http://tiki-prometheus:9090   ✓ đúng
+http://139.180.135.228:9090   ✗ không cần thiết (vẫn chạy được nhưng không phải best practice)
+```
+
+---
+
+## Ansible — Module thường dùng
+
+```yaml
+# Cài nhiều package cùng lúc
+- name: Install packages
+  apt:
+    name:
+      - git
+      - curl
+      - docker.io
+    state: present
+
+# Download file từ internet (thay vì dùng shell + curl)
+- name: Install docker-compose
+  get_url:
+    url: https://github.com/docker/compose/releases/download/v2.27.0/docker-compose-linux-x86_64
+    dest: /usr/local/bin/docker-compose
+    mode: '0755'   # chmod 755 — cấp quyền execute
+
+# Chạy lệnh shell trong thư mục cụ thể
+- name: Run docker-compose
+  shell:
+    cmd: docker-compose up -d
+    chdir: /root/app   # tương đương cd /root/app trước khi chạy
+```
+
+---
+
+## Terraform — Phân biệt hostname vs label
+
+```hcl
+resource "vultr_instance" "server" {
+  hostname = "tiki-server"   # tên bên trong OS (chạy `hostname` trên VPS sẽ thấy)
+  label    = "tiki-server"   # tên hiển thị trên Vultr dashboard
+}
+```
+Không set `label` → Vultr tự đặt tên là "Cloud Instance" trên dashboard (không ảnh hưởng hoạt động).
